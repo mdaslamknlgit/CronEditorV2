@@ -1,9 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
   <PropertyGroup>
-    <OutputType>Executable</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseRazorCompileOnPublish>true</UseRazorCompileOnPublish>
-    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
 </Project>
