@@ -1,0 +1,57 @@
+@page "/"
+
+<PageTitle>Home - CronEditor V2</PageTitle>
+
+<h1>Welcome to CronEditor V2</h1>
+
+<p class="lead">A modern Blazor Server application for managing cron schedules.</p>
+
+<div class="row mt-4">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">
+                    <span class="bi bi-clock-fill text-primary me-2"></span>
+                    Cron Schedule Manager
+                </h5>
+                <p class="card-text flex-grow-1">Create, edit, and manage cron schedules with a visual builder and expression editor.</p>
+                <a href="/cron-schedule" class="btn btn-primary mt-auto">Open Scheduler</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">
+                    <span class="bi bi-pencil-square text-success me-2"></span>
+                    Visual Builder
+                </h5>
+                <p class="card-text flex-grow-1">Use the visual cron builder to construct expressions using dropdowns and preset schedules.</p>
+                <a href="/cron-schedule" class="btn btn-success mt-auto">Build Expression</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">
+                    <span class="bi bi-plus-square-fill text-info me-2"></span>
+                    Counter Demo
+                </h5>
+                <p class="card-text flex-grow-1">Explore the interactive server-side counter component demonstrating real-time Blazor updates.</p>
+                <a href="/counter" class="btn btn-info mt-auto">Go to Counter</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h4 class="alert-heading">Getting Started</h4>
+            <p>Navigate to <strong>Cron Schedule</strong> in the sidebar to manage your schedules. Use the <strong>Add New Schedule</strong> button to open the visual cron builder.</p>
+            <hr />
+            <p class="mb-0">Cron expressions follow the format: <code>minute hour day month dayOfWeek [year]</code></p>
+        </div>
+    </div>
+</div>

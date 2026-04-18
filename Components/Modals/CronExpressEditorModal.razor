@@ -1,0 +1,184 @@
+@rendermode InteractiveServer
+@inject CronBuilderService CronService
+
+@if (isVisible)
+{
+    <div class="modal-backdrop-custom">
+        <div class="modal-dialog-custom card shadow-lg" style="max-width: 700px; margin: auto;">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <span class="bi bi-code-slash me-2"></span>Edit Cron Expression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="HandleCancel"></button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Schedule Name -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Schedule Name</label>
+                        <input type="text" class="form-control" @bind="scheduleName" @bind:event="oninput"
+                               placeholder="Schedule name" />
+                    </div>
+
+                    <!-- Expression + Description side by side -->
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">Cron Expression</label>
+                        <input type="text" class="form-control font-monospace @(isExpressionValid ? "is-valid" : "is-invalid")"
+                               @bind="cronExpression" @bind:event="oninput" @bind:after="ValidateExpression"
+                               placeholder="e.g. 0 0 * * *" />
+                        <div class="form-text text-muted">
+                            Format: <code>min hour day month dow [year]</code>
+                        </div>
+                        @if (!isExpressionValid && !string.IsNullOrEmpty(validationError))
+                        {
+                            <div class="invalid-feedback d-block small">
+                                <span class="bi bi-exclamation-circle me-1"></span>@validationError
+                            </div>
+                        }
+                        @if (isExpressionValid)
+                        {
+                            <div class="valid-feedback d-block small text-success">
+                                <span class="bi bi-check-circle me-1"></span>Valid expression
+                            </div>
+                        }
+                    </div>
+
+                    <div class="col-md-7">
+                        <label class="form-label fw-semibold">Description</label>
+                        <div class="card bg-light h-100" style="min-height: 72px;">
+                            <div class="card-body py-2 px-3">
+                                @if (isExpressionValid && !string.IsNullOrEmpty(expressionDescription))
+                                {
+                                    <p class="mb-0 text-secondary small">@expressionDescription</p>
+                                }
+                                else if (!isExpressionValid)
+                                {
+                                    <p class="mb-0 text-danger small">
+                                        <span class="bi bi-x-circle me-1"></span>Fix the expression to see a description.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <p class="mb-0 text-muted small">Enter a cron expression to see its description.</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick reference -->
+                    <div class="col-12">
+                        <details>
+                            <summary class="small text-muted" style="cursor:pointer;">Quick Reference</summary>
+                            <div class="mt-2 p-2 bg-light rounded small">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Special characters:</strong>
+                                        <ul class="mb-1 ps-3">
+                                            <li><code>*</code> — any value</li>
+                                            <li><code>*/n</code> — every n units</li>
+                                            <li><code>a-b</code> — range from a to b</li>
+                                            <li><code>a,b,c</code> — list of values</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Examples:</strong>
+                                        <ul class="mb-1 ps-3">
+                                            <li><code>* * * * *</code> — every minute</li>
+                                            <li><code>0 0 * * *</code> — daily midnight</li>
+                                            <li><code>0 9 * * 1-5</code> — weekdays 9am</li>
+                                            <li><code>*/15 * * * *</code> — every 15 min</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Active toggle -->
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="activeToggle" @bind="isActive" />
+                            <label class="form-check-label" for="activeToggle">Active</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-end gap-2">
+                <button class="btn btn-secondary" @onclick="HandleCancel">Cancel</button>
+                <button class="btn btn-info text-white" @onclick="HandleSave"
+                        disabled="@(!isExpressionValid || string.IsNullOrWhiteSpace(scheduleName) || string.IsNullOrWhiteSpace(cronExpression))">
+                    <span class="bi bi-check2 me-1"></span>Save Expression
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<CronScheduleItem> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool isVisible = false;
+    private CronScheduleItem? editingItem;
+
+    private string scheduleName = string.Empty;
+    private string cronExpression = string.Empty;
+    private bool isActive = true;
+
+    private bool isExpressionValid = false;
+    private string validationError = string.Empty;
+    private string expressionDescription = string.Empty;
+
+    public void Show(CronScheduleItem item)
+    {
+        editingItem = item;
+        scheduleName = item.Name;
+        cronExpression = item.Expression;
+        isActive = item.IsActive;
+        ValidateExpression();
+        isVisible = true;
+        StateHasChanged();
+    }
+
+    public void Hide()
+    {
+        isVisible = false;
+        StateHasChanged();
+    }
+
+    private void ValidateExpression()
+    {
+        if (string.IsNullOrWhiteSpace(cronExpression))
+        {
+            isExpressionValid = false;
+            validationError = "Expression cannot be empty.";
+            expressionDescription = string.Empty;
+            return;
+        }
+        var (valid, error) = CronService.ValidateCronExpression(cronExpression);
+        isExpressionValid = valid;
+        validationError = error;
+        expressionDescription = valid ? CronService.GetDescription(cronExpression) : string.Empty;
+    }
+
+    private async Task HandleSave()
+    {
+        if (!isExpressionValid || string.IsNullOrWhiteSpace(scheduleName)) return;
+
+        var item = editingItem ?? new CronScheduleItem();
+        item.Name = scheduleName.Trim();
+        item.Expression = cronExpression.Trim();
+        item.Description = CronService.GetDescription(cronExpression);
+        item.IsActive = isActive;
+
+        isVisible = false;
+        await OnSave.InvokeAsync(item);
+    }
+
+    private async Task HandleCancel()
+    {
+        isVisible = false;
+        await OnCancel.InvokeAsync();
+    }
+}
