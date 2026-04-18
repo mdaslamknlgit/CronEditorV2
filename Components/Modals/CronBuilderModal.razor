@@ -1,0 +1,250 @@
+@rendermode InteractiveServer
+@inject CronBuilderService CronService
+
+@if (isVisible)
+{
+    <div class="modal-backdrop-custom">
+        <div class="modal-dialog-custom card shadow-lg" style="max-width: 680px; margin: auto;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <span class="bi bi-clock me-2"></span>
+                    @(editingItem is null ? "Add New Schedule" : "Edit Schedule")
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="HandleCancel"></button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Name -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Schedule Name</label>
+                        <input type="text" class="form-control" placeholder="e.g. Daily Backup"
+                               @bind="scheduleName" @bind:event="oninput" />
+                    </div>
+
+                    <!-- Presets -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Preset Schedules</label>
+                        <select class="form-select" @onchange="ApplyPreset">
+                            <option value="">-- Select a preset --</option>
+                            @foreach (var preset in presets)
+                            {
+                                <option value="@preset.Expression">@preset.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Cron Fields -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Cron Expression Fields</label>
+                        <div class="row g-2">
+                            <div class="col">
+                                <label class="form-label small text-muted">Minute</label>
+                                <input type="text" class="form-control form-control-sm text-center font-monospace"
+                                       @bind="fieldMinute" @bind:event="oninput" @bind:after="RebuildExpression"
+                                       placeholder="*" />
+                                <div class="text-muted" style="font-size:0.7rem; text-align:center;">0-59</div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small text-muted">Hour</label>
+                                <input type="text" class="form-control form-control-sm text-center font-monospace"
+                                       @bind="fieldHour" @bind:event="oninput" @bind:after="RebuildExpression"
+                                       placeholder="*" />
+                                <div class="text-muted" style="font-size:0.7rem; text-align:center;">0-23</div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small text-muted">Day</label>
+                                <input type="text" class="form-control form-control-sm text-center font-monospace"
+                                       @bind="fieldDay" @bind:event="oninput" @bind:after="RebuildExpression"
+                                       placeholder="*" />
+                                <div class="text-muted" style="font-size:0.7rem; text-align:center;">1-31</div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small text-muted">Month</label>
+                                <input type="text" class="form-control form-control-sm text-center font-monospace"
+                                       @bind="fieldMonth" @bind:event="oninput" @bind:after="RebuildExpression"
+                                       placeholder="*" />
+                                <div class="text-muted" style="font-size:0.7rem; text-align:center;">1-12</div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small text-muted">Day of Week</label>
+                                <input type="text" class="form-control form-control-sm text-center font-monospace"
+                                       @bind="fieldDow" @bind:event="oninput" @bind:after="RebuildExpression"
+                                       placeholder="*" />
+                                <div class="text-muted" style="font-size:0.7rem; text-align:center;">0-7 (0=Sun)</div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small text-muted">Year</label>
+                                <input type="text" class="form-control form-control-sm text-center font-monospace"
+                                       @bind="fieldYear" @bind:event="oninput" @bind:after="RebuildExpression"
+                                       placeholder="*" />
+                                <div class="text-muted" style="font-size:0.7rem; text-align:center;">1970-2099</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expression Preview -->
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body py-2">
+                                <div class="d-flex align-items-center gap-3 flex-wrap">
+                                    <div>
+                                        <span class="small text-muted">Expression:</span>
+                                        <code class="ms-1 fs-6">@builtExpression</code>
+                                    </div>
+                                    @if (isExpressionValid)
+                                    {
+                                        <span class="badge bg-success">Valid</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Invalid</span>
+                                    }
+                                </div>
+                                <div class="small text-secondary mt-1">@expressionDescription</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!isExpressionValid && !string.IsNullOrEmpty(validationError))
+                    {
+                        <div class="col-12">
+                            <div class="alert alert-danger py-2 mb-0 small">
+                                <span class="bi bi-exclamation-circle me-1"></span>@validationError
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Active toggle -->
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="activeSwitch" @bind="isActive" />
+                            <label class="form-check-label" for="activeSwitch">Active</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-end gap-2">
+                <button class="btn btn-secondary" @onclick="HandleCancel">Cancel</button>
+                <button class="btn btn-primary" @onclick="HandleSave"
+                        disabled="@(!isExpressionValid || string.IsNullOrWhiteSpace(scheduleName))">
+                    <span class="bi bi-check2 me-1"></span>Save Schedule
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<CronScheduleItem> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool isVisible = false;
+    private CronScheduleItem? editingItem;
+
+    private string scheduleName = string.Empty;
+    private string fieldMinute = "*";
+    private string fieldHour = "*";
+    private string fieldDay = "*";
+    private string fieldMonth = "*";
+    private string fieldDow = "*";
+    private string fieldYear = string.Empty;
+    private bool isActive = true;
+
+    private string builtExpression = "* * * * *";
+    private string expressionDescription = string.Empty;
+    private string validationError = string.Empty;
+    private bool isExpressionValid = true;
+
+    private List<(string Name, string Expression)> presets = new();
+
+    protected override void OnInitialized()
+    {
+        presets = CronService.GetPresetSchedules();
+    }
+
+    public void Show(CronScheduleItem? item)
+    {
+        editingItem = item;
+        if (item is not null)
+        {
+            scheduleName = item.Name;
+            isActive = item.IsActive;
+            ParseExpression(item.Expression);
+        }
+        else
+        {
+            ResetFields();
+        }
+        RebuildExpression();
+        isVisible = true;
+        StateHasChanged();
+    }
+
+    public void Hide()
+    {
+        isVisible = false;
+        StateHasChanged();
+    }
+
+    private void ResetFields()
+    {
+        scheduleName = string.Empty;
+        fieldMinute = "*";
+        fieldHour = "*";
+        fieldDay = "*";
+        fieldMonth = "*";
+        fieldDow = "*";
+        fieldYear = string.Empty;
+        isActive = true;
+    }
+
+    private void ParseExpression(string expr)
+    {
+        if (string.IsNullOrWhiteSpace(expr)) { ResetFields(); return; }
+        var parts = expr.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        fieldMinute = parts.Length > 0 ? parts[0] : "*";
+        fieldHour   = parts.Length > 1 ? parts[1] : "*";
+        fieldDay    = parts.Length > 2 ? parts[2] : "*";
+        fieldMonth  = parts.Length > 3 ? parts[3] : "*";
+        fieldDow    = parts.Length > 4 ? parts[4] : "*";
+        fieldYear   = parts.Length > 5 ? parts[5] : string.Empty;
+    }
+
+    private void ApplyPreset(ChangeEventArgs e)
+    {
+        var expr = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(expr)) return;
+        ParseExpression(expr);
+        RebuildExpression();
+    }
+
+    private void RebuildExpression()
+    {
+        builtExpression = CronService.BuildCronExpression(fieldMinute, fieldHour, fieldDay, fieldMonth, fieldDow, fieldYear);
+        var (valid, error) = CronService.ValidateCronExpression(builtExpression);
+        isExpressionValid = valid;
+        validationError = error;
+        expressionDescription = valid ? CronService.GetDescription(builtExpression) : string.Empty;
+    }
+
+    private async Task HandleSave()
+    {
+        if (!isExpressionValid || string.IsNullOrWhiteSpace(scheduleName)) return;
+
+        var item = editingItem ?? new CronScheduleItem();
+        item.Name = scheduleName.Trim();
+        item.Expression = builtExpression;
+        item.Description = CronService.GetDescription(builtExpression);
+        item.IsActive = isActive;
+
+        isVisible = false;
+        await OnSave.InvokeAsync(item);
+    }
+
+    private async Task HandleCancel()
+    {
+        isVisible = false;
+        await OnCancel.InvokeAsync();
+    }
+}
