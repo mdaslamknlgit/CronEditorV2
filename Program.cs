@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped<CronBuilderService>();
+builder.Services.AddSingleton<CronBuilderService>();
 
 var app = builder.Build();
 

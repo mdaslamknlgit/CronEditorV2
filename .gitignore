@@ -286,4 +286,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Blazor WebAssembly
-wwwroot/bootstrap/
+# wwwroot/bootstrap/ is intentionally tracked (contains Bootstrap CSS/JS)
