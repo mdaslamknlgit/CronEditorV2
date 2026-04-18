@@ -162,6 +162,7 @@ public class CronBuilderService
         var normalized = field.ToUpperInvariant();
         for (int i = 0; i < dowNames.Length; i++)
             normalized = normalized.Replace(dowNames[i], i.ToString());
+        // Allow 0-7 (both 0 and 7 represent Sunday, as per POSIX cron standard)
         return ValidateField(normalized, 0, 7, "Day of Week");
     }
 
@@ -230,9 +231,33 @@ public class CronBuilderService
     private static string ExpandDayOfWeek(string dow)
     {
         var names = new[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-        if (int.TryParse(dow, out var idx) && idx >= 0 && idx <= 6)
-            return names[idx];
-        if (dow == "7") return "Sunday";
+        if (dow == "*") return "every day of the week";
+        if (dow.Contains("*/"))
+        {
+            var step = dow.Split('/')[1];
+            return $"every {step} days of the week";
+        }
+        if (dow.Contains(','))
+        {
+            var parts = dow.Split(',').Select(p => ExpandDayOfWeekSingle(p.Trim(), names));
+            return string.Join(", ", parts);
+        }
+        if (dow.Contains('-'))
+        {
+            var parts = dow.Split('-');
+            if (parts.Length == 2)
+                return $"{ExpandDayOfWeekSingle(parts[0], names)} through {ExpandDayOfWeekSingle(parts[1], names)}";
+        }
+        return ExpandDayOfWeekSingle(dow, names);
+    }
+
+    private static string ExpandDayOfWeekSingle(string dow, string[] names)
+    {
+        if (int.TryParse(dow, out var idx))
+        {
+            if (idx == 7) return "Sunday"; // 7 is also Sunday in POSIX cron
+            if (idx >= 0 && idx <= 6) return names[idx];
+        }
         return dow;
     }
 
@@ -240,6 +265,28 @@ public class CronBuilderService
     {
         var names = new[] { "", "January", "February", "March", "April", "May", "June",
                              "July", "August", "September", "October", "November", "December" };
+        if (month == "*") return "every month";
+        if (month.Contains("*/"))
+        {
+            var step = month.Split('/')[1];
+            return $"every {step} months";
+        }
+        if (month.Contains(','))
+        {
+            var parts = month.Split(',').Select(p => ExpandMonthSingle(p.Trim(), names));
+            return string.Join(", ", parts);
+        }
+        if (month.Contains('-'))
+        {
+            var parts = month.Split('-');
+            if (parts.Length == 2)
+                return $"{ExpandMonthSingle(parts[0], names)} through {ExpandMonthSingle(parts[1], names)}";
+        }
+        return ExpandMonthSingle(month, names);
+    }
+
+    private static string ExpandMonthSingle(string month, string[] names)
+    {
         if (int.TryParse(month, out var idx) && idx >= 1 && idx <= 12)
             return names[idx];
         return month;
